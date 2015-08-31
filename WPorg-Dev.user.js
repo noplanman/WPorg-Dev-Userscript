@@ -39,6 +39,13 @@ wodu.getSlug = function(url) {
   return '';
 };
 
+/**
+ * Generate the failed message and the retry button.
+ *
+ * @param {jQuery}   $el The error message panel gets appended to this jQuery object.
+ * @param {Function} cb  Callback function when clicking the "Retry" button.
+ * @return {jQuery} The jQuery object containing the message and button.
+ */
 wodu.getFailedRetryButton = function($el, cb) {
   $el.removeClass('wodu-loaded');
   return $('<div class="wodu-failed error">Failed.</div>')
@@ -86,6 +93,12 @@ wodu.getDevLinks = function(slug, $devPage) {
   return devLinks;
 };
 
+/**
+ * Load the contents of the dev submenu.
+ *
+ * @param {jQuery} $devMenu    The developer menu item.
+ * @param {jQuery} $devSubmenu The developer wodu submenu item.
+ */
 wodu.loadDevSubmenu = function($devMenu, $devSubmenu) {
   if ($devSubmenu.hasClass('wodu-loaded')) {
     return;
@@ -196,9 +209,20 @@ wodu.loadPluginCardExtra = function($card) {
 
     $panelInfo.append($('meta[itemprop="dateModified"]', $devPage).parent());
 
+    var devLinks = '';
+    var adminLink = '';
+    $.each(wodu.getDevLinks(slug, $devPage), function(index, link) {
+      var $link = $(link);
+      if ($link.hasClass('wodu-dev-admin')) {
+        adminLink += link;
+      } else {
+        devLinks += link + '<br/>';
+      }
+    });
+
     var $panelDev = $('.wodu-panel-dev', $card)
-      .append('<div class="wodu-subtitle"><a href="' + this.url + '">Developer</a></dev>')
-      .append(wodu.getDevLinks(slug, $devPage).map(function(e) { return e + '<br/>'; }))
+      .append('<div class="wodu-subtitle"><a href="' + this.url + '">Developer</a>' + adminLink + '</dev>')
+      .append(devLinks)
       .append(wodu.getDLLinkDropdown($devPage));
   })
   .always(function() {
@@ -226,7 +250,8 @@ wodu.setupPluginCardExtras = function($pluginCards) {
     '.wodu-plugin-card:before { content: ""; position: absolute; top: 0px; right: 0px; border-width: 36px 0 0 36px; border-style: solid; border-color: #ddd transparent; }' +
     '.wodu-plugin-card-extras { box-sizing: border-box; overflow: auto; display: none; position: absolute; width: 100%; height: 100%; margin: -20px -20px -10px; padding: 4px 10px; background-color: rgba(255, 255, 255, 0.9); z-index: 1; }' +
     '.wodu-title { padding: 4px 10px; font-size: 1.5em; font-weight: bold; }' +
-    '.wodu-subtitle { font-size: 1.2em; font-weight: bold; }'
+    '.wodu-subtitle { font-size: 1.2em; font-weight: bold; }' +
+    '.wodu-subtitle .wodu-dev-admin { font-size: .8em; margin-left: 5px; }'
   );
 
   $pluginCards.each(function() {
