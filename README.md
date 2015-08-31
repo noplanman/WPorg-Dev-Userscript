@@ -71,6 +71,6 @@ Well, if you really insist, go ahead =)
 - Add the developer submenu.
 - Add the plugin cards extras.
 
-[dev-submenu]: https://raw.githubusercontent.com/noplanman/WPord-Dev-Userscript/master/assets/assets/dev-submenu.png "Open submenu"
-[plugin-card]: https://raw.githubusercontent.com/noplanman/WPord-Dev-Userscript/master/assets/assets/plugin-card.png "Plugin card"
-[plugin-card-extra]: https://raw.githubusercontent.com/noplanman/WPord-Dev-Userscript/master/assets/assets/plugin-card-extra.png "Plugin card extra"
+[dev-submenu]: https://raw.githubusercontent.com/noplanman/WPorg-Dev-Userscript/master/assets/dev-submenu.png "Open submenu"
+[plugin-card]: https://raw.githubusercontent.com/noplanman/WPorg-Dev-Userscript/master/assets/plugin-card.png "Plugin card"
+[plugin-card-extra]: https://raw.githubusercontent.com/noplanman/WPorg-Dev-Userscript/master/assets/plugin-card-extra.png "Plugin card extra"
