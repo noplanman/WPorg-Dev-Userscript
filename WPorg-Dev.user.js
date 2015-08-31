@@ -293,8 +293,8 @@ wodu.init = function() {
     '.wodu-close { height: 16px; width: 16px; cursor: pointer; background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVQ4jaWT0Q2AIAwFbyQ2kw3sCG6IG8AG+kFNSAUEIWnSlLyDPgrkdQABuAYjADuFeFRoQwDSAiCwIH7iVUiANzer1ZoAr944FSTN0b1PQCwEzuRxBGAhPXETkCqA1mt1xbaFaROjaWfYxM30XKt1PZgapJVRPiF/iL8AUW8Qpc2cLAA3TsPXvWkb2AIAAAAASUVORK5CYII=) }' +
     '.wodu-col-6 { width: 50%; float: left; padding: 4px 10px; box-sizing: border-box; }' +
     '.wodu-failed { margin: 0; }' +
-    '.wodu-dev-admin { background: #439E47; color: #fff; padding: 0 6px; border-radius: 4px; }' +
-    '.wodu-dev-admin:hover { background: #218834 !important; color: #fff !important; }'
+    '.wodu-dev-admin { background: #439E47; color: #fff !important; padding: 0 6px; border-radius: 4px; }' +
+    '.wodu-dev-admin:hover { background: #218834 !important; }'
   );
 
   var $devMenu = $('#sections .section-developers');
@@ -307,4 +307,10 @@ wodu.init = function() {
     wodu.setupPluginCardExtras($pluginCards);
   }
 };
-window.addEventListener('DOMContentLoaded', wodu.init);
+
+// source: https://muffinresearch.co.uk/does-settimeout-solve-the-domcontentloaded-problem/
+if (/(?!.*?compatible|.*?webkit)^mozilla|opera/i.test(navigator.userAgent)) { // Feeling dirty yet?
+  document.addEventListener('DOMContentLoaded', wodu.init, false);
+} else {
+  window.setTimeout(wodu.init, 0);
+}
