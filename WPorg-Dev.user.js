@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WPorg-Dev
 // @namespace   wordpress
-// @description A userscript to help developers access certain pages a lot easier.
+// @description A userscript to help developers access certain WordPress.org pages a lot easier.
 // @include     https://wordpress.org/plugins/*
 // @include     https://wordpress.org/support/plugin/*
 // @include     https://wordpress.org/support/view/plugin-reviews/*
