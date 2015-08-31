@@ -39,6 +39,13 @@ wodu.getSlug = function(url) {
   return '';
 };
 
+wodu.getFailedRetryButton = function($el, cb) {
+  $el.removeClass('wodu-loaded');
+  return $('<div class="wodu-failed error">Failed.</div>')
+    .append($('<div class="alignright button button-primary button-small">Retry</div>').click(cb))
+    .appendTo($el);
+};
+
 /**
  * Generate a dropdown menu with all the downloadable versions.
  *
@@ -83,6 +90,9 @@ wodu.loadDevSubmenu = function($devMenu, $devSubmenu) {
   if ($devSubmenu.hasClass('wodu-loaded')) {
     return;
   }
+
+  var slug = wodu.getSlug(location.href);
+
   var $spinner = $('<div class="wodu-spinner"/>');
 
   $devSubmenu.empty()
@@ -95,8 +105,7 @@ wodu.loadDevSubmenu = function($devMenu, $devSubmenu) {
     $devSubmenu.append(wodu.getDLLinkDropdown($devPage));
     $spinner.hide();
   } else {
-    var devURL = $('a', $devMenu).attr('href');
-    $.get(devURL, function(response) {
+    $.get(pluginsBaseURL + slug + '/developers', function(response) {
       // Get rid of all images first, no need to load those.
       var $devPage = $(response.replace(/<img[^>]*>/g, ''));
       $devSubmenu.append(wodu.getDevLinks(slug, $devPage));
@@ -106,14 +115,9 @@ wodu.loadDevSubmenu = function($devMenu, $devSubmenu) {
       $spinner.hide();
     })
     .fail(function() {
-      $devSubmenu.removeClass('wodu-loaded');
-      var $failButton = $('<div class="alignright button button-primary button-small">Retry</div>')
-        .click(function() {
-          wodu.loadDevSubmenu($devMenu, $devSubmenu);
-        });
-      $('<div class="wodu-failed error">Failed.</div>')
-        .append($failButton)
-        .appendTo($devSubmenu);
+      wodu.getFailedRetryButton($devSubmenu, function() {
+        wodu.loadDevSubmenu($devMenu, $devSubmenu);
+      });
     });
   }
 };
@@ -135,7 +139,6 @@ wodu.setupDevSubmenu = function($devMenu) {
   );
 
   var onSubmenu = false;
-  var slug = wodu.getSlug(location.href);
 
   var menuShowHide = function() {
     if (onSubmenu) {
@@ -187,15 +190,14 @@ wodu.loadPluginCardExtra = function($card) {
 
   var $spinner = $('.wodu-spinner', $card).show();
 
-  var devURL = pluginsBaseURL + slug + '/developers';
-  $.get(devURL, function(response) {
+  $.get(pluginsBaseURL + slug + '/developers', function(response) {
     // Get rid of all images first, no need to load those.
     var $devPage = $(response.replace(/<img[^>]*>/g, ''));
 
     $panelInfo.append($('meta[itemprop="dateModified"]', $devPage).parent());
 
     var $panelDev = $('.wodu-panel-dev', $card)
-      .append('<div class="wodu-subtitle"><a href="' + devURL + '">Developer</a></dev>')
+      .append('<div class="wodu-subtitle"><a href="' + this.url + '">Developer</a></dev>')
       .append(wodu.getDevLinks(slug, $devPage).map(function(e) { return e + '<br/>'; }))
       .append(wodu.getDLLinkDropdown($devPage));
   })
@@ -203,15 +205,9 @@ wodu.loadPluginCardExtra = function($card) {
     $spinner.hide();
   })
   .fail(function(e) {
-    $card.removeClass('wodu-loaded');
-
-    var $failButton = $('<div class="alignright button button-primary button-small">Retry</div>')
-      .click(function() {
-        wodu.loadPluginCardExtra($card);
-      });
-    $('<div class="wodu-failed error">Failed.</div>')
-      .append($failButton)
-      .appendTo($panelInfo);
+    wodu.getFailedRetryButton($panelInfo, function() {
+      wodu.loadPluginCardExtra($card);
+    });
   });
 };
 
@@ -272,7 +268,8 @@ wodu.init = function() {
     '.wodu-close { height: 16px; width: 16px; cursor: pointer; background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVQ4jaWT0Q2AIAwFbyQ2kw3sCG6IG8AG+kFNSAUEIWnSlLyDPgrkdQABuAYjADuFeFRoQwDSAiCwIH7iVUiANzer1ZoAr944FSTN0b1PQCwEzuRxBGAhPXETkCqA1mt1xbaFaROjaWfYxM30XKt1PZgapJVRPiF/iL8AUW8Qpc2cLAA3TsPXvWkb2AIAAAAASUVORK5CYII=) }' +
     '.wodu-col-6 { width: 50%; float: left; padding: 4px 10px; box-sizing: border-box; }' +
     '.wodu-failed { margin: 0; }' +
-    '.wodu-dev-admin { background: #439E47; color: #fff; }'
+    '.wodu-dev-admin { background: #439E47; color: #fff; padding: 0 6px; border-radius: 4px; }' +
+    '.wodu-dev-admin:hover { background: #218834 !important; color: #fff !important; }'
   );
 
   var $devMenu = $('#sections .section-developers');
