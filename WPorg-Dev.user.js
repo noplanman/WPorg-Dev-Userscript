@@ -2,7 +2,9 @@
 // @name        WPorg-Dev
 // @namespace   wordpress
 // @description A userscript to help developers access certain pages a lot easier.
-// @include     *wordpress.org/plugins/*
+// @include     https://wordpress.org/plugins/*
+// @include     https://wordpress.org/support/plugin/*
+// @include     https://wordpress.org/support/view/plugin-reviews/*
 // @version     1.0
 // @copyright   2015 Armando Lüscher
 // @author      Armando Lüscher
@@ -14,28 +16,106 @@
 // @updateURL   https://github.com/noplanman/WPorg-Dev-Userscript/raw/master/WPorg-Dev.user.js
 // ==/UserScript==
 
-// Make sure we have jQuery loaded.
-//if ( ! ( 'jQuery' in window ) ) { return false; }
-
-var pluginsURL = 'https://wordpress.org/plugins/';
+// The base URL of the WordPress plugins pages.
+var pluginsBaseURL = 'https://wordpress.org/plugins/';
 
 var wodu = {};
 
-wodu.getSlug = function(href) {
-  return href.substring(pluginsURL.length).replace(/\/+$/, '');
+/**
+ * Extract the plugin slug from a URL.
+ * @param {string} url URL to extract the plugin slug from.
+ * @return {string} The extracted plugin slug.
+ */
+wodu.getSlug = function(url) {
+  var p = url.indexOf('wordpress.org/plugins/');
+  if (p >= 0) {
+    return url.substring(p + 'wordpress.org/plugins/'.length).split('/')[0];
+  }
+  p = url.indexOf('wordpress.org/support');
+  if (p >= 0) {
+    url = url.replace(/\/+$/, '').split('/');
+    return url[url.length-1];
+  }
+  return '';
 };
 
-wodu.getDLLinkDropdown = function($page) {
+/**
+ * Generate a dropdown menu with all the downloadable versions.
+ *
+ * The dropdown also has the functionality, that when the selected value changes, the download of it begins.
+ *
+ * @param {jQuery} $devPage The page containing the links.
+ * @return {jQuery} Dropdown menu with all the links.
+ */
+wodu.getDLLinkDropdown = function($devPage) {
   var $select = $('<select/>')
-  .append('<option value="">Direct Download</option>')
-  .click(function() { this.value = ''; })
-  .change(function() { if (this.value) location.href = this.value; });
+    .append('<option value="">Direct Download</option>')
+    .click(function() { this.value = ''; })
+    .change(function() { if (this.value) location.href = this.value; });
 
-  $('.unmarked-list a[itemprop="downloadUrl"]', $page).each(function() {
+  $('.unmarked-list a[itemprop="downloadUrl"]', $devPage).each(function() {
     $select.append('<option value="' + $(this).attr('href') + '">' + $(this).text() + '</option>');
   });
 
   return $select;
+};
+
+/**
+ * Get the repository (and admin) links from the developers page.
+ *
+ * @param {string} slug     Plugin slug.
+ * @param {jQuery} $devPage The page containing the links.
+ * @return {array} An array of the 3 developer links.
+ */
+wodu.getDevLinks = function(slug, $devPage) {
+  var devLinks = [
+    '<a href="http://plugins.trac.wordpress.org/browser/' + slug + '">Browse in Trac</a>',
+    '<a href="http://plugins.svn.wordpress.org/'          + slug + '">Subversion Repo</a>',
+    '<a href="http://plugins.trac.wordpress.org/log/'     + slug + '">Development Log</a>'
+  ];
+  if ($('a[href*="' + slug + '/admin"]', $devPage).length) {
+    devLinks.push('<a class="wodu-dev-admin" href="' + pluginsBaseURL + slug + '/admin">Admin</a>');
+  }
+  return devLinks;
+};
+
+wodu.loadDevSubmenu = function($devMenu, $devSubmenu) {
+  if ($devSubmenu.hasClass('wodu-loaded')) {
+    return;
+  }
+  var $spinner = $('<div class="wodu-spinner"/>');
+
+  $devSubmenu.empty()
+    .addClass('wodu-loaded')
+    .append($spinner);
+
+  if ($devMenu.hasClass('current')) {
+    var $devPage = $('#pagebody');
+    $devSubmenu.append(wodu.getDevLinks(slug, $devPage));
+    $devSubmenu.append(wodu.getDLLinkDropdown($devPage));
+    $spinner.hide();
+  } else {
+    var devURL = $('a', $devMenu).attr('href');
+    $.get(devURL, function(response) {
+      // Get rid of all images first, no need to load those.
+      var $devPage = $(response.replace(/<img[^>]*>/g, ''));
+      $devSubmenu.append(wodu.getDevLinks(slug, $devPage));
+      $devSubmenu.append(wodu.getDLLinkDropdown($devPage));
+    })
+    .always(function() {
+      $spinner.hide();
+    })
+    .fail(function() {
+      $devSubmenu.removeClass('wodu-loaded');
+      var $failButton = $('<div class="alignright button button-primary button-small">Retry</div>')
+        .click(function() {
+          wodu.loadDevSubmenu($devMenu, $devSubmenu);
+        });
+      $('<div class="wodu-failed error">Failed.</div>')
+        .append($failButton)
+        .appendTo($devSubmenu);
+    });
+  }
 };
 
 /**
@@ -47,65 +127,92 @@ wodu.setupDevSubmenu = function($devMenu) {
   // Add the CSS.
   GM_addStyle(
     '.wodu-spinner { width: 100%; }' +
-    '.wodu-dev-menu { display:none; position: absolute; background: white; border: 1px solid #d7d7d7; }' +
-    '.wodu-dev-menu > * { display: block; font-size: 1.2em; }' +
-    '.wodu-dev-menu > a { display: block; padding: 0 6px; }'
+    '.wodu-dev-submenu { display:none; position: absolute; background: white; border: 1px solid #d7d7d7; padding: 6px; }' +
+    '.wodu-dev-submenu > * { display: block; font-size: 1.2em; }' +
+    '.wodu-dev-submenu > select { margin-top: 6px; }' +
+    '.wodu-dev-submenu > a { display: block; padding: 0 6px; }' +
+    '.wodu-dev-submenu > a:hover { background: rgba(0,0,0,.05); }'
   );
 
-  var slug = wodu.getSlug(location.href);
-  var tracLog  = 'http://plugins.trac.wordpress.org/log/' + slug;
-  var svnRepo  = 'http://plugins.svn.wordpress.org/' + slug;
-  var tracRepo = 'http://plugins.trac.wordpress.org/browser/' + slug;
-
   var onSubmenu = false;
+  var slug = wodu.getSlug(location.href);
 
   var menuShowHide = function() {
     if (onSubmenu) {
-      $wodu.show();
+      $devSubmenu.show();
     } else {
-      $wodu.hide();
+      $devSubmenu.hide();
     }
   };
 
   var onSubmenuHover = function() {
     onSubmenu = true;
-    $wodu.show();
+    $devSubmenu.show();
   };
   var onSubmenuBlur = function() {
     onSubmenu = false;
     setTimeout(function() { menuShowHide(); }, 100);
   };
-  $devMenu.hover(onSubmenuHover, onSubmenuBlur);
 
-  var $spinner = $('<div class="wodu-spinner"/>');
   var p = $devMenu.position();
-  var h = $('#plugin-info .head').height();
-
-  var $wodu = $('<div/>', {
-    class: 'wodu-dev-menu',
-    html:
-      '<a href="' + tracRepo + '">Browse in Trac</a>' +
-      '<a href="' + svnRepo  + '">Subversion Repo</a>' +
-      '<a href="' + tracLog  + '">Development Log</a>',
-    style: 'top: ' + (p.top + h) + 'px; left: ' + p.left + 'px;'
+  var h = $devMenu.outerHeight();
+  var w = $devMenu.outerWidth();
+  $devMenu.hover(onSubmenuHover, onSubmenuBlur);
+  var $devSubmenu = $('<div/>', {
+    class: 'wodu-dev-submenu',
+    style: 'top: ' + (p.top + h) + 'px; left: ' + p.left + 'px; min-width: ' + w + 'px'
   })
-  .hover(onSubmenuHover, onSubmenuBlur)
-  .append($spinner)
-  .appendTo($('body'));
+    .hover(onSubmenuHover, onSubmenuBlur)
+    .appendTo($('body'));
 
-  if ($devMenu.hasClass('current')) {
-    $wodu.append(wodu.getDLLinkDropdown($('.block-content')));
-    $spinner.hide();
-  } else {
-    $.get($('a', $devMenu).attr('href'), function(response) {
-      // Get rid of all images first, no need to load those.
-      var $devPage = $(response.replace(/<img[^>]*>/g, ''));
-      $wodu.append(wodu.getDLLinkDropdown($('.block-content', $devPage)));
-    })
-    .always(function() {
-      $spinner.hide();
-    });
+  wodu.loadDevSubmenu($devMenu, $devSubmenu);
+};
+
+/**
+ * Load the extra plugin infos for a certain plugin.
+ *
+ * @param {jQuery} $card The plugin cart to load the infos for.
+ */
+wodu.loadPluginCardExtra = function($card) {
+  if ($card.hasClass('wodu-loaded')) {
+    return;
   }
+  $card.addClass('wodu-loaded');
+
+  // Get rid of any error message that may be there.
+
+  var slug = wodu.getSlug($('.name a', $card).attr('href'));
+
+  var $panelInfo = $('.wodu-panel-info', $card).empty();
+
+  var $spinner = $('.wodu-spinner', $card).show();
+
+  var devURL = pluginsBaseURL + slug + '/developers';
+  $.get(devURL, function(response) {
+    // Get rid of all images first, no need to load those.
+    var $devPage = $(response.replace(/<img[^>]*>/g, ''));
+
+    $panelInfo.append($('meta[itemprop="dateModified"]', $devPage).parent());
+
+    var $panelDev = $('.wodu-panel-dev', $card)
+      .append('<div class="wodu-subtitle"><a href="' + devURL + '">Developer</a></dev>')
+      .append(wodu.getDevLinks(slug, $devPage).map(function(e) { return e + '<br/>'; }))
+      .append(wodu.getDLLinkDropdown($devPage));
+  })
+  .always(function() {
+    $spinner.hide();
+  })
+  .fail(function(e) {
+    $card.removeClass('wodu-loaded');
+
+    var $failButton = $('<div class="alignright button button-primary button-small">Retry</div>')
+      .click(function() {
+        wodu.loadPluginCardExtra($card);
+      });
+    $('<div class="wodu-failed error">Failed.</div>')
+      .append($failButton)
+      .appendTo($panelInfo);
+  });
 };
 
 /**
@@ -116,96 +223,42 @@ wodu.setupDevSubmenu = function($devMenu) {
 wodu.setupPluginCardExtras = function($pluginCards) {
   // Add the CSS.
   GM_addStyle(
-    '.wodu-extras-button { height: 16px; width: 16px; cursor: pointer; background: url(datauri); }' +
+    '.wodu-extras-button { position: absolute; top: 4px; right: 4px; height: 16px; width: 16px; cursor: pointer; background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjElEQVQ4jdWSUQ2AMAxEn4RKQMIkIAEJSEHCHIAEnIATcAA/HYGyhoUvuL8l17vXdPAXdUD1drgBNkCejEGbrAZgNDTBmgRYnIAVaE/vqN6DSIBJm6w8/FFnJCHOGVMO/1w6A30yHWkP+FnqS1oBflrhQi3aFgvwo3pvwfaMHn4kc0ar4s/jqXbaP6gdQPwjtYbeRCAAAAAASUVORK5CYII=); }' +
     '.wodu-spinner { position: absolute; left: 50%; top: 50%; }' +
     '.wodu-close { position: absolute; top: 4px; right: 4px; }' +
     '.wodu-plugin-card { position: relative; }' +
-    '.wodu-plugin-card-extras { display: none; position: absolute; width: 100%; height: 100%; margin: -20px -20px -10px; padding: 4px 10px; background-color: rgba(255, 255, 255, 0.9); z-index: 1; }' +
-    '.wodu-title { padding: 4px 10px; font-size: 1.2em; font-weight: bold; }' +
-    '.wodu-subtitle { padding: 0 10px; font-size: 1.1em; font-weight: bold; }'
+    '.wodu-plugin-card:before { content: ""; position: absolute; top: 0px; right: 0px; border-width: 36px 0 0 36px; border-style: solid; border-color: #ddd transparent; }' +
+    '.wodu-plugin-card-extras { box-sizing: border-box; overflow: auto; display: none; position: absolute; width: 100%; height: 100%; margin: -20px -20px -10px; padding: 4px 10px; background-color: rgba(255, 255, 255, 0.9); z-index: 1; }' +
+    '.wodu-title { padding: 4px 10px; font-size: 1.5em; font-weight: bold; }' +
+    '.wodu-subtitle { font-size: 1.2em; font-weight: bold; }'
   );
 
   $pluginCards.each(function() {
     var $card = $(this).addClass('wodu-plugin-card');
     var $cardTop = $('.plugin-card-top', $card);
 
-
     var $extrasButton = $('<div class="wodu-extras-button"/>')
-    .click(function() {
-      $extrasButton.hide();
-      $extras.show();
-    })
-    .prependTo($cardTop);
+      .click(function() {
+        $extrasButton.hide();
+        $extras.show();
+        wodu.loadPluginCardExtra($card);
+      })
+      .prependTo($cardTop);
 
     // Prepare the extras.
-    var $spinner = $('<div class="wodu-spinner"/>');
     var $close = $('<div class="wodu-close"/>')
-    .click(function() {
-      $extras.hide();
-      $extrasButton.show();
-    });
-    var $panelInfo = $('<div class="wodu-col-6 wodu-panel-info"/>');
-    var $panelDev  = $('<div class="wodu-col-6 wodu-panel-dev"/>');
+      .click(function() {
+        $extras.hide();
+        $extrasButton.show();
+      });
     var extrasLoading = false;
     var $extras = $('<div/>', { class: 'wodu-plugin-card-extras' })
-    .append($spinner)
-    .append($close)
-    .append($panelInfo)
-    .append($panelDev)
-    .prependTo($cardTop);
-
-addToInfo = '<br><strong>Total Downloads:</strong>' + 2346622
-
-
-/*
-
-<div class="wodu-plugin-card-extras" style="">
-  <div class="wodu-close"></div>
-  <div class="wodu-title">Plugin title</div>
-  <div class="wodu-col-4 wodu-panel-info">
-
-      <strong>Requires:</strong> 3.5 or higher<br>
-
-      <strong>Compatible up to:</strong> 4.2.4<br>
-
-  <strong>Last Updated: </strong> <meta itemprop="dateModified" content="2015-7-23">2015-7-23<br>
-
-      <strong>Active Installs:</strong>
-    <meta itemprop="interactionCount" content="UserDownloads:660">
-    90+<br>
-
-      <strong>Total Downloads:</strong>
-    2346622
-    </div>
-
-
-  <div class="wodu-col-4 wodu-panel-dev">
-    <div class="wodu-subtitle">Dev Links</div>
-      List of Links
-      <ul>
-        <li>Link 1</li>
-        <li>Link 2</li>
-      </ul>
-  </div>
-</div>
-
- */
-
-
-
-    var slug = wodu.getSlug($('.name a', $card).attr('href'));
-    console.log(slug);
-    $.get(pluginsURL + slug + '/developers', function(response) {
-      // Get rid of all images first, no need to load those.
-      var $devPage = $(response.replace(/<img[^>]*>/g, ''));
-
-
-
-      $panelDev.append(wodu.getDLLinkDropdown($devPage));
-    })
-    .always(function() {
-      $spinner.hide();
-    });
+      .append($close)
+      .append('<div class="wodu-spinner"/>')
+      .append('<div class="wodu-title">' + $('.name a', $card).parent().html() +'</div>')
+      .append('<div class="wodu-col-6 wodu-panel-info"/>')
+      .append('<div class="wodu-col-6 wodu-panel-dev"/>')
+      .prependTo($cardTop);
   });
 };
 
@@ -215,9 +268,11 @@ addToInfo = '<br><strong>Total Downloads:</strong>' + 2346622
 wodu.init = function() {
   // Add the global CSS rules.
   GM_addStyle(
-    '.wodu-spinner { height: 16px; width: 16px; background: url(data:image/gif;base64,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) }' +
-    '.wodu-close { height: 16px; width: 16px; cursor: pointer; background: url(data:image/gif;base64,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) }' +
-    '.wodu-col-6 { width: 50%; float: left; padding: 4px 10px; box-sizing: border-box; }'
+    '.wodu-spinner { height: 16px; width: 16px; background: no-repeat center center url(data:image/gif;base64,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) }' +
+    '.wodu-close { height: 16px; width: 16px; cursor: pointer; background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVQ4jaWT0Q2AIAwFbyQ2kw3sCG6IG8AG+kFNSAUEIWnSlLyDPgrkdQABuAYjADuFeFRoQwDSAiCwIH7iVUiANzer1ZoAr944FSTN0b1PQCwEzuRxBGAhPXETkCqA1mt1xbaFaROjaWfYxM30XKt1PZgapJVRPiF/iL8AUW8Qpc2cLAA3TsPXvWkb2AIAAAAASUVORK5CYII=) }' +
+    '.wodu-col-6 { width: 50%; float: left; padding: 4px 10px; box-sizing: border-box; }' +
+    '.wodu-failed { margin: 0; }' +
+    '.wodu-dev-admin { background: #439E47; color: #fff; }'
   );
 
   var $devMenu = $('#sections .section-developers');
