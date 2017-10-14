@@ -16,15 +16,11 @@ If you feel sure about what you're doing and just can't hold it anymore, skip ah
 ##Features
 
 Here's a list of currently available features:
-- [Developer submenu](#developer-submenu): A submenu for the **Developer** tab on a plugin page.
 - [Plugin card extras](#plugin-card-extras): Extra information panel for plugin cards on the WP.org plugins listing pages.
 
 ---
 
-###Developer submenu
-When viewing a single plugin page, hovering over the **Developer** tab now opens a quick an convenient set of links for easy access to the Subversion repository, Trac code browser, Trac development log, plugin admin (if available) and a dropdown with direct download links to all versions of the plugin.
 
-![Open submenu][dev-submenu]
 
 ###Plugin card extras
 When viewing a plugins listing page, each plugin card now has a little *code* icon on the top right corner. Clicking it, will load an overlay with the important information of the plugin and a collection of developer links for easy access (see *[Developer submenu](#developer-submenu))*.
