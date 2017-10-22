@@ -22,9 +22,9 @@ Here's a list of currently available features:
 ### Plugin card extras
 When viewing a plugins listing page, each plugin card now has a little *code* icon on the top right corner. Clicking it, will load an overlay with the important information of the plugin and a collection of developer links for easy access.
 
-![Plugin card]
+![Plugin card](assets/plugin-card.png)
 
-![Plugin card extra]
+![Plugin card extra](assets/plugin-card-extra.png)
 
 ---
 
@@ -56,12 +56,12 @@ Well, if you really insist, [go ahead](https://noplanman.ch/donate) =)
 
 ## Changelog
 
-### Version 2.0
+### 2.0
 
 - Adapt to new WP Plugin Repository.
 - Remove developer submenu.
 
-### Version 1.0
+### 1.0
 
 - Add the developer submenu.
 - Add the plugin cards extras.
@@ -75,5 +75,3 @@ Icons: https://www.icons8.com/
 [Get it on OpenUserJS.org]: https://openuserjs.org/install/noplanman/WPorg-Dev.user.js "OpenUserJS.org"
 [Get it on GreasyFork]: https://greasyfork.org/scripts/12089-wporg-dev/code/WPorg-Dev.user.js "GreasyFork"
 [Get it on GitHub]: https://raw.githubusercontent.com/noplanman/WPorg-Dev-Userscript/master/WPorg-Dev.user.js "GitHub"
-[Plugin card]: https://raw.githubusercontent.com/noplanman/WPorg-Dev-Userscript/master/assets/plugin-card.png "Plugin card"
-[Plugin card extra]: https://raw.githubusercontent.com/noplanman/WPorg-Dev-Userscript/master/assets/plugin-card-extra.png "Plugin card extra"
